@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Irregular Verbs Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Police style écriture à la main pour l'effet tableau -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'chalk': ['"Patrick Hand"', 'cursive'],
+                    },
+                    colors: {
+                        board: {
+                            bg: '#18181b', 
+                            card: '#27272a', 
+                            text: '#f4f4f5', 
+                            accent: '#fbbf24', 
+                            danger: '#f87171', 
+                        },
+                        paper: {
+                            bg: '#fdfbf7', 
+                            card: '#ffffff',
+                            text: '#1e293b', 
+                            accent: '#0284c7', 
+                            lines: '#e2e8f0',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* BASE STYLE & TRANSITIONS */
+        body {
+            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+        }
+
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- THEME TABLEAU NOIR (Défaut / Dark) --- */
+        .theme-blackboard {
+            background-color: #18181b; 
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            color: #f4f4f5;
+        }
+
+        .theme-blackboard .chalk-border {
+            border: 2px dashed rgba(255,255,255,0.15);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+        }
+
+        .theme-blackboard .btn-primary-style {
+            background-color: transparent;
+            border: 2px solid #fbbf24;
+            color: #fbbf24;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+        }
+        .theme-blackboard .btn-primary-style:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+        }
+
+        .theme-blackboard .card-style {
+            background-color: #27272a; 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .theme-blackboard .checkbox-checked {
+            background-color: #fbbf24 !important;
+            border-color: #fbbf24 !important;
+            color: #18181b !important;
+            border-style: solid !important;
+        }
+
+        .theme-blackboard input[type=range] {
+            accent-color: #fbbf24;
+        }
+
+        /* --- THEME CAHIER (Jour) --- */
+        .theme-paper {
+            background-color: #fdfbf7;
+            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #1e293b;
+        }
+
+        .theme-paper .chalk-border {
+            border: 2px solid #1e293b;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        .theme-paper .btn-primary-style {
+            background-color: #0284c7;
+            border: 2px solid #0284c7;
+            color: white;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        .theme-paper .btn-primary-style:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+        }
+
+        .theme-paper .card-style {
+            background-color: white;
+            border: 1px solid #cbd5e1;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .theme-paper .text-highlight { color: #0284c7; }
+        .theme-blackboard .text-highlight { color: #fbbf24; }
+
+        .theme-paper .checkbox-checked {
+            background-color: #0284c7 !important;
+            border-color: #0284c7 !important;
+            color: white !important;
+            border-style: solid !important;
+        }
+
+        .theme-paper input[type=range] {
+            accent-color: #0284c7;
+        }
+
+        /* --- COMMON --- */
+        button:focus-visible, input:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        .screen { display: none; flex: 1; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        .game-input {
+            background: transparent;
+            border: 2px dashed;
+            font-size: 1.5rem;
+            text-align: center;
+            border-radius: 0.5rem;
+            width: 100%;
+            padding: 0.5rem;
+            font-family: 'Patrick Hand', cursive;
+        }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 10px; }
+
+        /* Footer Style */
+        .footer-credit {
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            padding: 10px;
+            margin-top: auto;
+            font-family: sans-serif; /* More readable for small text */
+        }
+    </style>
+</head>
+<body class="theme-blackboard">
+
+<div class="app-container" id="app">
+
+    <!-- ECRAN 1: DASHBOARD -->
+    <div id="screen-home" class="screen active p-6 fade-in">
+        <header class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-4xl font-bold tracking-tight text-highlight" style="text-shadow: 2px 2px 0px rgba(0,0,0,0.1);">IRREGULAR<br>VERBS</h1>
+                <p class="opacity-70 text-sm mt-1">L'École des Verbes</p>
+            </div>
+            
+            <!-- THEME TOGGLE -->
+            <button onclick="toggleTheme()" class="card-style w-12 h-12 rounded-full flex items-center justify-center text-xl transition-transform hover:scale-110">
+                <i id="theme-icon" class="fa-solid fa-sun"></i>
+            </button>
+        </header>
+
+        <!-- Stats rapides -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="card-style p-3 rounded-lg text-center relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-1 opacity-20"><i class="fa-solid fa-trophy"></i></div>
+                <div class="text-3xl font-bold text-highlight" id="stat-mastered">0</div>
+                <div class="text-sm opacity-70 font-bold">Maîtrisés</div>
+            </div>
+            <div class="card-style p-3 rounded-lg text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-1 opacity-20"><i class="fa-solid fa-bullseye"></i></div>
+                <div class="text-3xl font-bold text-highlight" id="stat-streak">0</div>
+                <div class="text-sm opacity-70 font-bold">Série Max</div>
+            </div>
+        </div>
+
+        <!-- SELECTEUR MODE DE SAISIE (Déplacé ici) -->
+        <div class="mb-6">
+            <label class="text-sm opacity-70 mb-2 block font-bold uppercase text-center">Comment répondre ?</label>
+            <div class="flex gap-4 justify-center">
+                <button onclick="setInputMode('buttons')" id="btn-mode-buttons" class="flex-1 py-3 px-4 rounded-xl border-2 border-transparent transition-all font-bold text-lg relative card-style hover:bg-white/5">
+                    <i class="fa-solid fa-hand-pointer mr-2"></i> QCM
+                </button>
+                <button onclick="setInputMode('input')" id="btn-mode-input" class="flex-1 py-3 px-4 rounded-xl border-2 border-transparent transition-all font-bold text-lg opacity-50 card-style hover:bg-white/5">
+                    <i class="fa-solid fa-keyboard mr-2"></i> Clavier
+                </button>
+            </div>
+        </div>
+
+        <!-- GROS BOUTON START -->
+        <button onclick="startGame('sprint')" class="btn-primary-style w-full p-4 rounded-xl text-2xl font-bold transition-all flex items-center justify-center gap-3 mb-6">
+            <span class="animate-pulse">▶</span> COMMENCER
+        </button>
+
+        <!-- CONFIGURATION DE LA PARTIE -->
+        <div class="card-style p-4 rounded-xl mb-6 flex-1 flex flex-col min-h-0 relative chalk-border">
+            
+            <!-- SLIDER DIFFICULTÉ -->
+            <div class="mb-4 pb-4 border-b border-dashed border-gray-500/30">
+                <div class="flex justify-between items-end mb-2">
+                    <label class="text-sm opacity-70 font-bold uppercase"><i class="fa-solid fa-layer-group mr-1"></i> Difficulté</label>
+                    <span id="diff-label" class="text-highlight font-bold text-lg">Niveau 1</span>
+                </div>
+                <input type="range" id="diff-slider" min="1" max="3" value="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-500/30" oninput="updateDiffLabel(this.value)">
+                <div class="flex justify-between text-xs opacity-50 mt-1">
+                    <span>Apprenti</span>
+                    <span>Confirmé</span>
+                    <span>Expert</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-3 mt-1">
+                <h2 class="text-lg font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard"></i> Les Tableaux
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="toggleAllCategories(true)" class="text-xs border border-current px-2 py-1 rounded hover:bg-white/10 transition-colors">Tout</button>
+                    <button onclick="toggleAllCategories(false)" class="text-xs border border-current px-2 py-1 rounded hover:bg-white/10 transition-colors">Rien</button>
+                </div>
+            </div>
+            
+            <!-- Liste à choix multiples -->
+            <div id="category-list" class="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar" style="max-height: 250px;">
+                <!-- Checkboxes injected by JS -->
+            </div>
+        </div>
+        
+        <button onclick="resetProgress()" class="mt-4 text-xs opacity-50 hover:opacity-100 underline text-center w-full">
+            Effacer le tableau (Reset)
+        </button>
+
+        <footer class="footer-credit">
+            Auteur : Mrs Darlix - Collège Karine Ruby
+        </footer>
+    </div>
+
+    <!-- ECRAN 2: JEU -->
+    <div id="screen-game" class="screen p-4 relative">
+        <!-- Header Jeu -->
+        <div class="flex justify-between items-center mb-6 h-12">
+            <!-- Bouton Quitter Corrigé -->
+            <button onclick="endGame(false)" class="w-10 h-10 rounded-full card-style flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors" aria-label="Quitter">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <div class="card-style px-6 py-2 rounded-full font-bold text-xl tracking-widest text-highlight">
+                <span id="game-score">0</span> PTS
+            </div>
+
+            <div class="w-10 h-10 flex items-center justify-center font-bold text-xl">
+                 <span id="game-timer-txt">15</span>
+            </div>
+        </div>
+
+        <!-- Barre de progression Timer (Style Craie) -->
+        <div class="w-full h-3 rounded-full mb-8 overflow-hidden border-2 border-dashed border-gray-500/30 p-0.5">
+            <div id="timer-bar" class="h-full bg-current opacity-80 rounded-full transition-all duration-100 ease-linear" style="width: 100%"></div>
+        </div>
+
+        <!-- Question Card -->
+        <div class="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full">
+            
+            <div class="mb-8 text-center">
+                <span class="opacity-60 text-sm font-bold tracking-[0.2em] mb-2 block uppercase">Traduction</span>
+                <h2 class="text-5xl font-bold mb-8 text-highlight" style="transform: rotate(-2deg);" id="q-translation">Manger</h2>
+                
+                <div class="flex flex-col gap-4 relative">
+                    <!-- Background decoration -->
+                    <div class="absolute inset-0 border-2 border-white/5 rounded-xl transform rotate-1 pointer-events-none"></div>
+
+                    <!-- Base Verbale -->
+                    <div class="card-style p-4 rounded-lg relative transition-all" id="box-base">
+                        <span class="text-xs opacity-60 font-bold block mb-1 uppercase">Base Verbale</span>
+                        <span class="text-2xl font-bold" id="q-base">eat</span>
+                    </div>
+
+                    <!-- The Challenge Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="card-style p-4 rounded-lg relative transition-all" id="box-preterit">
+                            <span class="text-xs opacity-60 font-bold block mb-1 uppercase">Prétérit</span>
+                            <span class="text-2xl font-bold" id="q-preterit">?</span>
+                        </div>
+                        <div class="card-style p-4 rounded-lg relative transition-all" id="box-participle">
+                            <span class="text-xs opacity-60 font-bold block mb-1 uppercase">Participe</span>
+                            <span class="text-2xl font-bold" id="q-participle">eaten</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div id="game-input-area" class="mb-6 min-h-[160px] flex items-end justify-center w-full">
+                <!-- Content injected via JS -->
+            </div>
+            
+            <div id="feedback-msg" class="h-8 text-center text-xl font-bold opacity-0 transition-opacity"></div>
+        </div>
+    </div>
+
+    <!-- ECRAN 3: RESULTATS -->
+    <div id="screen-result" class="screen p-8 justify-center items-center text-center fade-in">
+        <div class="mb-6 relative">
+             <div class="absolute inset-0 bg-yellow-400 blur-2xl opacity-20 rounded-full"></div>
+            <i class="fa-solid fa-star text-8xl text-highlight mb-4 block relative z-10 animate-bounce"></i>
+            <h2 class="text-5xl font-bold mb-2">Terminé !</h2>
+            <p class="opacity-70 text-xl font-chalk" id="result-message">Beau travail !</p>
+        </div>
+
+        <div class="w-full max-w-sm card-style rounded-xl p-6 mb-8 transform rotate-1 chalk-border">
+            <div class="flex justify-between items-center mb-4 pb-4 border-b border-dashed border-gray-500/30">
+                <span class="opacity-70 text-xl">Score</span>
+                <span class="text-3xl font-bold text-highlight" id="final-score">0</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="opacity-70 text-xl">Précision</span>
+                <span class="text-3xl font-bold" id="final-accuracy">100%</span>
+            </div>
+        </div>
+
+        <button onclick="showScreen('screen-home')" class="btn-primary-style w-full p-4 rounded-xl text-xl font-bold mb-4 uppercase">
+            Retour au Menu
+        </button>
+        <button onclick="restartLastGame()" class="w-full p-4 rounded-xl opacity-60 hover:opacity-100 font-bold border-2 border-dashed border-current">
+            Rejouer
+        </button>
+    </div>
+
+</div>
+
+<script>
+    // --- DATA ---
+    const verbsDB = [
+        // TABLEAU 1: LES BASES
+        { base: 'be', preterit: 'was/were', participle: 'been', fr: 'être', cat: 'Tableau 1' },
+        { base: 'have', preterit: 'had', participle: 'had', fr: 'avoir', cat: 'Tableau 1' },
+        { base: 'do', preterit: 'did', participle: 'done', fr: 'faire', cat: 'Tableau 1' },
+        { base: 'make', preterit: 'made', participle: 'made', fr: 'fabriquer', cat: 'Tableau 1' },
+        { base: 'go', preterit: 'went', participle: 'gone', fr: 'aller', cat: 'Tableau 1' },
+        { base: 'get', preterit: 'got', participle: 'got', fr: 'obtenir', cat: 'Tableau 1' },
+        { base: 'break', preterit: 'broke', participle: 'broken', fr: 'casser', cat: 'Tableau 1' },
+        { base: 'take', preterit: 'took', participle: 'taken', fr: 'prendre', cat: 'Tableau 1' },
+
+        // TABLEAU 2: INVARIABLES
+        { base: 'cut', preterit: 'cut', participle: 'cut', fr: 'couper', cat: 'Tableau 2' },
+        { base: 'bet', preterit: 'bet', participle: 'bet', fr: 'parier', cat: 'Tableau 2' },
+        { base: 'let', preterit: 'let', participle: 'let', fr: 'laisser', cat: 'Tableau 2' },
+        { base: 'hurt', preterit: 'hurt', participle: 'hurt', fr: 'blesser', cat: 'Tableau 2' },
+        { base: 'put', preterit: 'put', participle: 'put', fr: 'mettre', cat: 'Tableau 2' },
+        { base: 'shut', preterit: 'shut', participle: 'shut', fr: 'fermer', cat: 'Tableau 2' },
+        { base: 'burst', preterit: 'burst', participle: 'burst', fr: 'éclater', cat: 'Tableau 2' },
+        { base: 'hit', preterit: 'hit', participle: 'hit', fr: 'frapper', cat: 'Tableau 2' },
+        { base: 'cost', preterit: 'cost', participle: 'cost', fr: 'coûter', cat: 'Tableau 2' },
+        { base: 'read', preterit: 'read', participle: 'read', fr: 'lire', cat: 'Tableau 2' },
+        { base: 'quit', preterit: 'quit', participle: 'quit', fr: 'quitter', cat: 'Tableau 2' },
+
+        // TABLEAU 3: TERMINAISON EN T
+        { base: 'burn', preterit: 'burnt', participle: 'burnt', fr: 'brûler', cat: 'Tableau 3' },
+        { base: 'build', preterit: 'built', participle: 'built', fr: 'construire', cat: 'Tableau 3' },
+        { base: 'send', preterit: 'sent', participle: 'sent', fr: 'envoyer', cat: 'Tableau 3' },
+        { base: 'spend', preterit: 'spent', participle: 'spent', fr: 'dépenser', cat: 'Tableau 3' },
+        { base: 'learn', preterit: 'learnt', participle: 'learnt', fr: 'apprendre', cat: 'Tableau 3' },
+        { base: 'lend', preterit: 'lent', participle: 'lent', fr: 'prêter', cat: 'Tableau 3' },
+        { base: 'shoot', preterit: 'shot', participle: 'shot', fr: 'tirer', cat: 'Tableau 3' },
+        { base: 'lose', preterit: 'lost', participle: 'lost', fr: 'perdre', cat: 'Tableau 3' },
+        { base: 'sit', preterit: 'sat', participle: 'sat', fr: 's\'asseoir', cat: 'Tableau 3' },
+
+        // TABLEAU 4: GHT
+        { base: 'buy', preterit: 'bought', participle: 'bought', fr: 'acheter', cat: 'Tableau 4' },
+        { base: 'bring', preterit: 'brought', participle: 'brought', fr: 'apporter', cat: 'Tableau 4' },
+        { base: 'fight', preterit: 'fought', participle: 'fought', fr: 'se battre', cat: 'Tableau 4' },
+        { base: 'think', preterit: 'thought', participle: 'thought', fr: 'penser', cat: 'Tableau 4' },
+        { base: 'catch', preterit: 'caught', participle: 'caught', fr: 'attraper', cat: 'Tableau 4' },
+        { base: 'teach', preterit: 'taught', participle: 'taught', fr: 'enseigner', cat: 'Tableau 4' },
+
+        // TABLEAU 5: I LONG -> E
+        { base: 'bleed', preterit: 'bled', participle: 'bled', fr: 'saigner', cat: 'Tableau 5' },
+        { base: 'feed', preterit: 'fed', participle: 'fed', fr: 'nourrir', cat: 'Tableau 5' },
+        { base: 'feel', preterit: 'felt', participle: 'felt', fr: 'ressentir', cat: 'Tableau 5' },
+        { base: 'keep', preterit: 'kept', participle: 'kept', fr: 'garder', cat: 'Tableau 5' },
+        { base: 'meet', preterit: 'met', participle: 'met', fr: 'rencontrer', cat: 'Tableau 5' },
+        { base: 'sleep', preterit: 'slept', participle: 'slept', fr: 'dormir', cat: 'Tableau 5' },
+        { base: 'dream', preterit: 'dreamt', participle: 'dreamt', fr: 'rêver', cat: 'Tableau 5' },
+        { base: 'mean', preterit: 'meant', participle: 'meant', fr: 'signifier', cat: 'Tableau 5' },
+        { base: 'lead', preterit: 'led', participle: 'led', fr: 'mener', cat: 'Tableau 5' },
+        { base: 'leave', preterit: 'left', participle: 'left', fr: 'partir', cat: 'Tableau 5' },
+
+        // TABLEAU 6: PRET & PART IDENTIQUES
+        { base: 'find', preterit: 'found', participle: 'found', fr: 'trouver', cat: 'Tableau 6' },
+        { base: 'hear', preterit: 'heard', participle: 'heard', fr: 'entendre', cat: 'Tableau 6' },
+        { base: 'pay', preterit: 'paid', participle: 'paid', fr: 'payer', cat: 'Tableau 6' },
+        { base: 'say', preterit: 'said', participle: 'said', fr: 'dire', cat: 'Tableau 6' },
+        { base: 'sell', preterit: 'sold', participle: 'sold', fr: 'vendre', cat: 'Tableau 6' },
+        { base: 'tell', preterit: 'told', participle: 'told', fr: 'raconter', cat: 'Tableau 6' },
+        { base: 'stand', preterit: 'stood', participle: 'stood', fr: 'être debout', cat: 'Tableau 6' },
+        { base: 'understand', preterit: 'understood', participle: 'understood', fr: 'comprendre', cat: 'Tableau 6' },
+        { base: 'win', preterit: 'won', participle: 'won', fr: 'gagner', cat: 'Tableau 6' },
+
+        // TABLEAU 7: ABA & DEVENIR
+        { base: 'become', preterit: 'became', participle: 'become', fr: 'devenir', cat: 'Tableau 7' },
+        { base: 'come', preterit: 'came', participle: 'come', fr: 'venir', cat: 'Tableau 7' },
+        { base: 'overcome', preterit: 'overcame', participle: 'overcome', fr: 'surmonter', cat: 'Tableau 7' },
+        { base: 'run', preterit: 'ran', participle: 'run', fr: 'courir', cat: 'Tableau 7' },
+
+        // TABLEAU 8: FIN EN "EN"
+        { base: 'beat', preterit: 'beat', participle: 'beaten', fr: 'battre', cat: 'Tableau 8' },
+        { base: 'bite', preterit: 'bit', participle: 'bitten', fr: 'mordre', cat: 'Tableau 8' },
+        { base: 'choose', preterit: 'chose', participle: 'chosen', fr: 'choisir', cat: 'Tableau 8' },
+        { base: 'eat', preterit: 'ate', participle: 'eaten', fr: 'manger', cat: 'Tableau 8' },
+        { base: 'drive', preterit: 'drove', participle: 'driven', fr: 'conduire', cat: 'Tableau 8' },
+        { base: 'fall', preterit: 'fell', participle: 'fallen', fr: 'tomber', cat: 'Tableau 8' },
+        { base: 'forbid', preterit: 'forbade', participle: 'forbidden', fr: 'interdire', cat: 'Tableau 8' },
+        { base: 'forget', preterit: 'forgot', participle: 'forgotten', fr: 'oublier', cat: 'Tableau 8' },
+        { base: 'forgive', preterit: 'forgave', participle: 'forgiven', fr: 'pardonner', cat: 'Tableau 8' },
+        { base: 'freeze', preterit: 'froze', participle: 'frozen', fr: 'geler', cat: 'Tableau 8' },
+        { base: 'give', preterit: 'gave', participle: 'given', fr: 'donner', cat: 'Tableau 8' },
+        { base: 'hide', preterit: 'hid', participle: 'hidden', fr: 'cacher', cat: 'Tableau 8' },
+        { base: 'see', preterit: 'saw', participle: 'seen', fr: 'voir', cat: 'Tableau 8' },
+        { base: 'speak', preterit: 'spoke', participle: 'spoken', fr: 'parler', cat: 'Tableau 8' },
+        { base: 'steal', preterit: 'stole', participle: 'stolen', fr: 'voler', cat: 'Tableau 8' },
+        { base: 'ride', preterit: 'rode', participle: 'ridden', fr: 'monter', cat: 'Tableau 8' },
+        { base: 'write', preterit: 'wrote', participle: 'written', fr: 'écrire', cat: 'Tableau 8' },
+
+        // TABLEAU 9: I-A-U
+        { base: 'begin', preterit: 'began', participle: 'begun', fr: 'commencer', cat: 'Tableau 9' },
+        { base: 'drink', preterit: 'drank', participle: 'drunk', fr: 'boire', cat: 'Tableau 9' },
+        { base: 'ring', preterit: 'rang', participle: 'rung', fr: 'sonner', cat: 'Tableau 9' },
+        { base: 'sing', preterit: 'sang', participle: 'sung', fr: 'chanter', cat: 'Tableau 9' },
+        { base: 'swim', preterit: 'swam', participle: 'swum', fr: 'nager', cat: 'Tableau 9' },
+
+        // TABLEAU 10: EAR / ORE
+        { base: 'bear', preterit: 'bore', participle: 'born', fr: 'supporter', cat: 'Tableau 10' },
+        { base: 'swear', preterit: 'swore', participle: 'sworn', fr: 'jurer', cat: 'Tableau 10' },
+        { base: 'tear', preterit: 'tore', participle: 'torn', fr: 'déchirer', cat: 'Tableau 10' },
+        { base: 'wear', preterit: 'wore', participle: 'worn', fr: 'porter', cat: 'Tableau 10' },
+
+        // TABLEAU 11: EW / OWN
+        { base: 'draw', preterit: 'drew', participle: 'drawn', fr: 'dessiner', cat: 'Tableau 11' },
+        { base: 'blow', preterit: 'blew', participle: 'blown', fr: 'souffler', cat: 'Tableau 11' },
+        { base: 'fly', preterit: 'flew', participle: 'flown', fr: 'voler', cat: 'Tableau 11' },
+        { base: 'grow', preterit: 'grew', participle: 'grown', fr: 'grandir', cat: 'Tableau 11' },
+        { base: 'know', preterit: 'knew', participle: 'known', fr: 'savoir', cat: 'Tableau 11' },
+        { base: 'throw', preterit: 'threw', participle: 'thrown', fr: 'jeter', cat: 'Tableau 11' }
+    ];
+
+    // --- STATE ---
+    let stats = {
+        mastered: [],
+        streak: 0,
+        totalAnswers: 0,
+        correctAnswers: 0
+    };
+
+    let config = {
+        inputMode: 'buttons', 
+        theme: 'blackboard',
+        difficulty: 1 // 1, 2, 3
+    };
+
+    let game = {
+        active: false,
+        score: 0,
+        streak: 0,
+        qIndex: 0,
+        qList: [],
+        currentQ: null,
+        targetField: null, // 'base', 'preterit', 'participle'
+        timer: null,
+        timeLeft: 0,
+        correctCount: 0
+    };
+
+    // --- INIT ---
+    function init() {
+        const savedStats = localStorage.getItem('verbsStats');
+        if (savedStats) stats = JSON.parse(savedStats);
+
+        const savedTheme = localStorage.getItem('verbsTheme');
+        if (savedTheme) {
+            config.theme = savedTheme;
+            applyTheme(config.theme);
+        }
+
+        generateCategoryCheckboxes();
+        updateHome();
+        setInputMode('buttons'); 
+        updateDiffLabel(1);
+    }
+
+    // --- THEME ENGINE ---
+    function toggleTheme() {
+        config.theme = config.theme === 'blackboard' ? 'paper' : 'blackboard';
+        applyTheme(config.theme);
+        localStorage.setItem('verbsTheme', config.theme);
+    }
+
+    function applyTheme(themeName) {
+        document.body.className = `theme-${themeName}`;
+        const icon = document.getElementById('theme-icon');
+        if(themeName === 'blackboard') {
+            icon.className = "fa-solid fa-sun"; 
+        } else {
+            icon.className = "fa-solid fa-moon"; 
+        }
+    }
+    
+    // --- SETUP UI ---
+    function updateDiffLabel(val) {
+        config.difficulty = parseInt(val);
+        const label = document.getElementById('diff-label');
+        if(val == 1) label.innerText = "Niveau 1";
+        if(val == 2) label.innerText = "Niveau 2";
+        if(val == 3) label.innerText = "Niveau 3";
+    }
+
+    function generateCategoryCheckboxes() {
+        const container = document.getElementById('category-list');
+        const categories = [];
+        verbsDB.forEach(v => {
+            if (!categories.includes(v.cat)) categories.push(v.cat);
+        });
+
+        container.innerHTML = '';
+        
+        categories.forEach((cat) => {
+            const wrapper = document.createElement('label');
+            wrapper.className = "block relative cursor-pointer group";
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = "checkbox";
+            checkbox.value = cat;
+            checkbox.className = "category-checkbox sr-only"; 
+            checkbox.checked = true;
+            
+            const display = document.createElement('div');
+            display.className = "p-3 rounded-lg border-2 border-solid transition-all flex items-center justify-between checkbox-checked";
+            
+            checkbox.onchange = (e) => {
+                if(checkbox.checked) {
+                    display.classList.add('checkbox-checked');
+                    display.classList.remove('border-dashed', 'border-gray-500/30');
+                    display.classList.add('border-solid');
+                } else {
+                    display.classList.remove('checkbox-checked');
+                    display.classList.remove('border-solid');
+                    display.classList.add('border-dashed', 'border-gray-500/30');
+                }
+            };
+            
+            display.innerHTML = `
+                <span class="font-bold text-lg">${cat}</span>
+                <div class="w-6 h-6 rounded border-2 border-current flex items-center justify-center opacity-50 check-icon">
+                    <i class="fa-solid fa-check text-xs"></i>
+                </div>
+            `;
+            
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(display);
+            container.appendChild(wrapper);
+        });
+    }
+
+    function toggleAllCategories(check) {
+        document.querySelectorAll('.category-checkbox').forEach(cb => {
+            cb.checked = check;
+            const display = cb.nextElementSibling;
+            if(check) {
+                display.classList.add('checkbox-checked');
+                display.classList.remove('border-dashed', 'border-gray-500/30');
+                display.classList.add('border-solid');
+            } else {
+                display.classList.remove('checkbox-checked');
+                display.classList.remove('border-solid');
+                display.classList.add('border-dashed', 'border-gray-500/30');
+            }
+        });
+    }
+
+    function setInputMode(mode) {
+        config.inputMode = mode;
+        const btnB = document.getElementById('btn-mode-buttons');
+        const btnI = document.getElementById('btn-mode-input');
+        
+        btnB.classList.remove('text-highlight', 'opacity-50', 'border-current');
+        btnI.classList.remove('text-highlight', 'opacity-50', 'border-current');
+        btnB.classList.add('border-transparent', 'opacity-50');
+        btnI.classList.add('border-transparent', 'opacity-50');
+
+        if (mode === 'buttons') {
+            btnB.classList.remove('border-transparent', 'opacity-50');
+            btnB.classList.add('text-highlight', 'border-current');
+        } else {
+            btnI.classList.remove('border-transparent', 'opacity-50');
+            btnI.classList.add('text-highlight', 'border-current');
+        }
+    }
+
+    function updateHome() {
+        document.getElementById('stat-streak').innerText = stats.streak;
+        document.getElementById('stat-mastered').innerText = stats.mastered.length;
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function saveStats() {
+        localStorage.setItem('verbsStats', JSON.stringify(stats));
+        updateHome();
+    }
+    
+    function resetProgress() {
+        if(confirm("Effacer tout le tableau ? (Reset stats)")) {
+            stats = { mastered: [], streak: 0, totalAnswers: 0, correctAnswers: 0 };
+            saveStats();
+        }
+    }
+
+    // --- GAME LOGIC ---
+
+    function startGame() {
+        const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+        const selectedCats = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (selectedCats.length === 0) {
+            alert("Il faut choisir au moins un tableau !");
+            return;
+        }
+
+        game.active = true;
+        game.score = 0;
+        game.streak = 0;
+        game.qIndex = 0;
+        game.correctCount = 0;
+        
+        let pool = verbsDB.filter(v => selectedCats.includes(v.cat));
+        game.qList = pool.sort(() => 0.5 - Math.random());
+        game.qList = game.qList.slice(0, 20);
+
+        showScreen('screen-game');
+        nextQuestion();
+    }
+
+    function restartLastGame() {
+        startGame();
+    }
+
+    function nextQuestion() {
+        if (!game.active) return;
+
+        if (game.qIndex >= game.qList.length) {
+            endGame(true);
+            return;
+        }
+
+        const verb = game.qList[game.qIndex];
+        game.currentQ = verb;
+        
+        // --- DIFFICULTY LOGIC ---
+        // Level 1: Base Shown. Find Pret or Part.
+        // Level 2: Base Hidden. Find Pret or Part.
+        // Level 3: Base Hidden. Find Base, Pret, or Part (Random).
+        
+        const lvl = config.difficulty;
+        
+        if (lvl === 3) {
+            const types = ['base', 'preterit', 'participle'];
+            game.targetField = types[Math.floor(Math.random() * 3)];
+        } else {
+            // Level 1 & 2 targets Pret or Part
+            game.targetField = Math.random() > 0.5 ? 'preterit' : 'participle';
+        }
+
+        renderQuestionUI(verb);
+        
+        // Timer
+        clearInterval(game.timer);
+        const baseTime = config.inputMode === 'input' ? 20 : 10; 
+        game.timeLeft = baseTime;
+        startTimer(baseTime);
+    }
+
+    function renderQuestionUI(verb) {
+        document.getElementById('game-score').innerText = game.score;
+        document.getElementById('q-translation').innerText = verb.fr;
+        
+        const lvl = config.difficulty;
+        const target = game.targetField;
+
+        const boxBase = document.getElementById('box-base');
+        const boxPret = document.getElementById('box-preterit');
+        const boxPart = document.getElementById('box-participle');
+        
+        const txtBase = document.getElementById('q-base');
+        const txtPret = document.getElementById('q-preterit');
+        const txtPart = document.getElementById('q-participle');
+
+        // 1. Reset Styles
+        [boxBase, boxPret, boxPart].forEach(b => {
+            b.className = "card-style p-4 rounded-lg relative transition-all";
+            b.style.borderColor = "";
+            b.style.opacity = "1";
+            b.classList.remove('text-highlight');
+        });
+        [txtBase, txtPret, txtPart].forEach(t => t.className = "text-2xl font-bold");
+
+        // 2. Set Content & Visibility based on Level
+        
+        // BASE
+        if (target === 'base') {
+            txtBase.innerText = '?';
+            boxBase.classList.add('text-highlight');
+            boxBase.style.borderColor = "currentColor";
+        } else {
+            if (lvl === 1) {
+                txtBase.innerText = verb.base; // Show hint in Level 1
+            } else {
+                txtBase.innerText = '?'; // Hide hint in Lvl 2 & 3
+                boxBase.style.opacity = "0.5";
+            }
+        }
+
+        // PRETERIT
+        if (target === 'preterit') {
+            txtPret.innerText = '?';
+            boxPret.classList.add('text-highlight');
+            boxPret.style.borderColor = "currentColor";
+        } else {
+            if (lvl === 3) {
+                txtPret.innerText = '?'; // Hide in expert
+                boxPret.style.opacity = "0.5";
+            } else {
+                txtPret.innerText = verb.preterit; // Show as context in Lvl 1 & 2
+            }
+        }
+
+        // PARTICIPLE
+        if (target === 'participle') {
+            txtPart.innerText = '?';
+            boxPart.classList.add('text-highlight');
+            boxPart.style.borderColor = "currentColor";
+        } else {
+            if (lvl === 3) {
+                txtPart.innerText = '?'; // Hide in expert
+                boxPart.style.opacity = "0.5";
+            } else {
+                txtPart.innerText = verb.participle; // Show as context
+            }
+        }
+
+        // 3. Inputs Generation
+        const inputArea = document.getElementById('game-input-area');
+        inputArea.innerHTML = '';
+        const feedback = document.getElementById('feedback-msg');
+        feedback.style.opacity = '0';
+        feedback.className = "h-8 text-center text-xl font-bold opacity-0 transition-opacity";
+
+        if (config.inputMode === 'input') {
+            const input = document.createElement('input');
+            input.type = "text";
+            input.className = "game-input text-highlight border-current focus:ring-0";
+            input.placeholder = "Écris la réponse...";
+            input.autocomplete = "off";
+            
+            setTimeout(() => input.focus(), 100);
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleInputAnswer(input.value);
+            });
+            
+            const btnVal = document.createElement('button');
+            btnVal.className = "btn-primary-style w-full mt-3 py-2 rounded-lg font-bold";
+            btnVal.innerText = "VALIDER";
+            btnVal.onclick = () => handleInputAnswer(input.value);
+
+            const div = document.createElement('div');
+            div.className = "w-full max-w-xs";
+            div.appendChild(input);
+            div.appendChild(btnVal);
+            inputArea.appendChild(div);
+
+        } else {
+            const grid = document.createElement('div');
+            grid.className = "grid grid-cols-1 w-full gap-3";
+            grid.id = "answers-grid";
+
+            const answers = generateOptions(verb, target);
+            answers.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "card-style p-4 rounded-xl text-xl font-bold hover:bg-white/10 transition-all active:scale-[0.98]";
+                btn.innerText = opt;
+                btn.onclick = () => handleButtonAnswer(opt, btn);
+                grid.appendChild(btn);
+            });
+            inputArea.appendChild(grid);
+        }
+    }
+
+    function generateOptions(correctVerb, targetField) {
+        let opts = [correctVerb[targetField]];
+        let pool = verbsDB.filter(v => v.cat === correctVerb.cat);
+        if (pool.length < 4) pool = verbsDB; 
+
+        while (opts.length < 4) {
+            const r = pool[Math.floor(Math.random() * pool.length)];
+            const val = r[targetField];
+            if (!opts.includes(val) && val !== "?") opts.push(val);
+        }
+        return opts.sort(() => 0.5 - Math.random());
+    }
+
+    function startTimer(maxTime) {
+        const bar = document.getElementById('timer-bar');
+        const txt = document.getElementById('game-timer-txt');
+        
+        bar.style.transition = 'none';
+        bar.style.width = '100%';
+        bar.offsetHeight;
+        bar.style.transition = `width ${maxTime}s linear`;
+        bar.style.width = '0%';
+        txt.innerText = maxTime;
+
+        game.timer = setInterval(() => {
+            game.timeLeft -= 1;
+            txt.innerText = game.timeLeft;
+            if (game.timeLeft <= 0) {
+                clearInterval(game.timer);
+                timeOut();
+            }
+        }, 1000);
+    }
+
+    // --- HANDLERS ---
+
+    function handleButtonAnswer(ans, btn) {
+        if (!game.active) return;
+        const allBtns = document.querySelectorAll('#answers-grid button');
+        allBtns.forEach(b => b.disabled = true);
+        
+        const correct = game.currentQ[game.targetField];
+        processResult(ans === correct, correct, btn);
+    }
+
+    function handleInputAnswer(val) {
+        if (!game.active) return;
+        const input = document.querySelector('.game-input');
+        input.disabled = true;
+
+        const correct = game.currentQ[game.targetField];
+        const userClean = val.trim().toLowerCase();
+        const correctClean = correct.toLowerCase();
+        
+        let isCorrect = false;
+        if (correctClean.includes('/')) {
+            const parts = correctClean.split('/');
+            isCorrect = parts.includes(userClean) || userClean === correctClean;
+        } else {
+            isCorrect = userClean === correctClean;
+        }
+
+        processResult(isCorrect, correct, input);
+    }
+
+    function processResult(isCorrect, correctVal, element) {
+        clearInterval(game.timer);
+        stats.totalAnswers++;
+        
+        const feedback = document.getElementById('feedback-msg');
+        feedback.style.opacity = '1';
+
+        if (isCorrect) {
+            stats.correctAnswers++;
+            game.score += 10 + game.timeLeft;
+            game.streak++;
+            game.correctCount++;
+
+            element.style.borderColor = "#4ade80"; 
+            element.style.color = "#4ade80";
+            if(element.tagName === 'BUTTON') element.style.backgroundColor = "rgba(74, 222, 128, 0.1)";
+
+            feedback.innerText = "Bien joué !";
+            feedback.style.color = "#4ade80";
+
+            if (game.streak > stats.streak) stats.streak = game.streak;
+            if (!stats.mastered.includes(game.currentQ.base)) stats.mastered.push(game.currentQ.base);
+
+            setTimeout(() => {
+                game.qIndex++;
+                nextQuestion();
+            }, 1000);
+
+        } else {
+            game.streak = 0;
+            
+            element.style.borderColor = "#f87171"; 
+            element.style.color = "#f87171";
+            element.classList.add('shake');
+            
+            if(element.tagName === 'INPUT') {
+                element.value = `${element.value} ➔ ${correctVal}`;
+            } else {
+                 const allBtns = document.querySelectorAll('#answers-grid button');
+                 allBtns.forEach(b => {
+                     if (b.innerText === correctVal) {
+                         b.style.borderColor = "#4ade80";
+                         b.style.color = "#4ade80";
+                     }
+                 });
+            }
+
+            feedback.innerText = `Non ! C'était "${correctVal}"`;
+            feedback.style.color = "#f87171";
+
+            setTimeout(() => {
+                game.qIndex++;
+                nextQuestion();
+            }, 2500);
+        }
+        saveStats();
+    }
+
+    function timeOut() {
+        const feedback = document.getElementById('feedback-msg');
+        const correct = game.currentQ[game.targetField];
+        
+        feedback.innerText = `Trop tard ! C'était "${correct}"`;
+        feedback.style.color = "#f87171";
+        feedback.style.opacity = '1';
+        
+        game.streak = 0;
+        
+        const inputs = document.querySelectorAll('input, button');
+        inputs.forEach(i => i.disabled = true);
+
+        setTimeout(() => {
+            game.qIndex++;
+            nextQuestion();
+        }, 2000);
+    }
+
+    function endGame(victory) {
+        game.active = false;
+        clearInterval(game.timer);
+        
+        // Nouvelle logique : si on quitte manuellement (victory == false), retour au menu
+        if (victory === false) {
+            showScreen('screen-home');
+            return;
+        }
+
+        showScreen('screen-result');
+        
+        document.getElementById('final-score').innerText = game.score;
+        let acc = stats.totalAnswers > 0 ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) : 0;
+        document.getElementById('final-accuracy').innerText = acc + "%";
+        
+        const msgs = ["Peut mieux faire...", "Pas mal !", "Super !", "Excellent travail !", "Légendaire !"];
+        let idx = Math.min(4, Math.floor(game.score / 150));
+        document.getElementById('result-message').innerText = msgs[idx];
+    }
+
+    init();
+
+</script>
+</body>
+</html>
